@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Books Management</title>
+    <style>
+        .book-list {
+            margin: 20px 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .book-list li {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+
+        .action-buttons {
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Books List</h1>
+    {% if not books %}
+    <h3> You still don’t have any books :(</h3>
+    {% endif %}
+    <ul id="bookList" class="book-list">
+        {% for book in books %}
+        <li id="book-{{ book.id }}">
+            {{ book.id }} - {{ book.title }} (Author ID: {{ book.author_id }})
+            <span class="action-buttons">
+                <button onclick="deleteBook( {{ book.id }} )">Delete</button>
+                <button onclick="showEditForm({{ book.id }}, '{{ book.title }}', {{ book.author_id }})">Edit</button>
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2>Add New Book</h2>
+    <form id="bookForm">
+        <input type="text" id="title" placeholder="Title" required>
+        <input type="number" id="author_id" placeholder="Author ID" required>
+        <button type="button" onclick="createBook()">Add Book</button>
+    </form>
+
+    <div id="editForm" style="display: none; margin-top: 20px;">
+        <h2>Edit Book</h2>
+        <form>
+            <input type="hidden" id="edit_id">
+            <input type="text" id="edit_title" placeholder="Title" required>
+            <input type="number" id="edit_author_id" placeholder="Author ID" required>
+            <button type="button" onclick="updateBook()">Update</button>
+            <button type="button" onclick="cancelEdit()">Cancel</button>
+        </form>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <p><a href="/">← Back</a></p>
+
+    <script>
+        function showMessage(text, isSuccess) {
+            const messageDiv = document.getElementById("message");
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        async function createBook() {
+            const title = document.getElementById("title").value;
+            const author_id = document.getElementById("author_id").value;
+            const bookList = document.getElementById("bookList");
+
+            try {
+                const response = await fetch("/books/create_book/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, author_id }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || "Server error");
+                }
+
+                const data = await response.json();
+
+                // Add new book to the list (at the bottom)
+                const newBookItem = document.createElement("li");
+                newBookItem.id = `book-${data.book.id}`;
+                newBookItem.innerHTML = `
+                    ${data.book.id} - ${data.book.title} (Author ID: ${data.book.author_id})
+                    <span class="action-buttons">
+                        <button onclick="deleteBook(${data.book.id})">Delete</button>
+                        <button onclick="showEditForm(${data.book.id}, '${data.book.title}', ${data.book.author_id})">Edit</button>
+                    </span>
+                `;
+                bookList.appendChild(newBookItem);
+
+                showMessage(data.message, true);
+                document.getElementById("bookForm").reset();
+            } catch (error) {
+                showMessage(error.message, false);
+            }
+        }
+
+        async function deleteBook(bookId) {
+            try {
+                const response = await fetch(`/books/delete_book/${bookId}`, {
+                    method: "DELETE",
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || "Server error");
+                }
+
+                const data = await response.json();
+                document.getElementById(`book-${bookId}`).remove();
+                showMessage(data.message, true);
+            } catch (error) {
+                showMessage(error.message, false);
+            }
+        }
+
+        function showEditForm(bookId, title, authorId) {
+            document.getElementById("edit_id").value = bookId;
+            document.getElementById("edit_title").value = title;
+            document.getElementById("edit_author_id").value = authorId;
+            document.getElementById("editForm").style.display = "block";
+        }
+
+        function cancelEdit() {
+            document.getElementById("editForm").style.display = "none";
+        }
+
+        async function updateBook() {
+            const bookId = document.getElementById("edit_id").value;
+            const title = document.getElementById("edit_title").value;
+            const author_id = document.getElementById("edit_author_id").value;
+
+            try {
+                const response = await fetch(`/books/update_book/${bookId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, author_id }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || "Server error");
+                }
+
+                const data = await response.json();
+                const bookItem = document.getElementById(`book-${bookId}`);
+                bookItem.innerHTML = `
+                    ${data.book.id} - ${data.book.title} (Author ID: ${data.book.author_id})
+                    <span class="action-buttons">
+                        <button onclick="deleteBook(${data.book.id})">Delete</button>
+                        <button onclick="showEditForm(${data.book.id}, '${data.book.title}', ${data.book.author_id})">Edit</button>
+                    </span>
+                `;
+
+                showMessage(data.message, true);
+                document.getElementById("editForm").style.display = "none";
+            } catch (error) {
+                showMessage(error.message, false);
+            }
+        }
+    </script>
+</body>
+
+</html>

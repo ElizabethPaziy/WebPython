@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Пользователи</title>
+    <style>
+        .user-list {
+            margin: 20px 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .user-list li {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>The list of users</h1>
+
+    {% if not users %}
+    <h3> You still don’t have any users :(</h3>
+    {% endif %}
+
+    <ul id="userList" class="user-list">
+        {% for user in users %}
+        <li>{{ user.id }} - {{ user.username }} ({{ user.role }})</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Create a user</h2>
+    <form id="userForm">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="text" id="role" placeholder="Role" required>
+        <button type="button" onclick="createUser()">Create</button>
+    </form>
+    <div id="message" class="message"></div>
+    <p><a href="/">← Back</a></p>
+
+    <script>
+        async function createUser() {
+            const username = document.getElementById("username").value;
+            const role = document.getElementById("role").value;
+            const messageDiv = document.getElementById("message");
+            const userList = document.getElementById("userList");
+
+            try {
+                const response = await fetch("create_user/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, role }),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || "Server Error");
+                }
+
+                const data = await response.json();
+
+                const newUserItem = document.createElement("li");
+                newUserItem.textContent = `${data.user.id} - ${data.user.username} (${data.user.role})`;
+                userList.appendChild(newUserItem); 
+
+                messageDiv.textContent = data.message;
+                messageDiv.className = "message success";
+
+                document.getElementById("userForm").reset();
+            } catch (error) {
+                messageDiv.textContent = error.message;
+                messageDiv.className = "message error";
+            }
+        }
+    </script>
+</body>
+
+</html>
