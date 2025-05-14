@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Users</h1>
+
+<div class="form">
+    <h2>Register</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <select id="role">
+        <option value="user">User</option>
+        <option value="author">Author</option>
+    </select>
+    <button onclick="registerUser()">Register</button>
+    <div id="registerMessage"></div>
+</div>
+
+<!-- <div class="form">
+    <h2>Login</h2>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="loginUser()">Login</button>
+    <div id="loginMessage"></div>
+</div> -->
+
+<table id="usersTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.role }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="/"> <-- Back</a>
+
+<script>
+    async function registerUser() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const role = document.getElementById('role').value;
+
+        try {
+            const result = await sendJsonRequest('/users/register/', 'POST', {
+                username: username,
+                password: password,
+                role: role
+            });
+
+            // Добавляем нового пользователя в таблицу
+            const table = document.getElementById('usersTable').getElementsByTagName('tbody')[0];
+            const row = table.insertRow();
+            row.innerHTML = `
+                    <td>${result.user.id}</td>
+                    <td>${result.user.username}</td>
+                    <td>${result.user.role}</td>
+                `;
+
+            document.getElementById('registerMessage').textContent = result.message;
+        } catch (error) {
+            document.getElementById('registerMessage').textContent = error.message;
+        }
+    }
+
+</script>
+{% endblock %}
